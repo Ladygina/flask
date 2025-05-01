@@ -1,5 +1,6 @@
 import requests
 from flask import Flask, jsonify,request
+#from requests import request
 from flask.views import MethodView
 from models import Advertisement, Session
 from sqlalchemy.exc import IntegrityError
@@ -20,7 +21,7 @@ def get_advertisement(advertisement_id):
     adv = request.session.get(Advertisement,advertisement_id)
     if adv is None:
         raise HttpError('404', 'advertisement not found')
-    return adv
+    return adv, 'GET'
 
 @app.before_request
 def before_request():
@@ -42,9 +43,10 @@ def add_advertisement(advertisement):
 
 class SitesView(MethodView):
     def get(self, advertisement_id:int):
+        print('Get received')
 
         advertisement = get_advertisement(advertisement_id)
-        return jsonify(advertisement.id_dict)
+        return jsonify(advertisement.dict)
 
     def post(self):
         print("Received POST request")
@@ -67,7 +69,7 @@ class SitesView(MethodView):
         elif data.get('description'):
             advertisement.description = data['description']
         add_advertisement(advertisement)
-        return jsonify(advertisement.id_dict)
+        return jsonify(advertisement.dict)
 
 
     def delete(self,advertisement_id:int):
@@ -79,11 +81,6 @@ class SitesView(MethodView):
 sites_view = SitesView.as_view('sites_view')
 app.add_url_rule("/api/advertisements/<int:advertisement_id>", view_func=sites_view, methods=['GET','PATCH','DELETE'])
 app.add_url_rule("/api/advertisements", view_func=sites_view, methods=['POST'])
-# with Session() as session:
-#     @app.route('/advertisements', methods=['GET'])
-#     def get_advertisements():
-#         advertisements = session.query(Advertisement).all()  # Получаем все экземпляры
-#         return jsonify([ad.dict for ad in advertisements])
+
 if __name__ == '__main__':
-    app.run(debug=True, use_debugger=False, use_reloader=False)
-    #toolbar = DebugToolbarExtension(app)
+    app.run()

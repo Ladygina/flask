@@ -3,40 +3,87 @@ from sqlalchemy import create_engine, Integer, String, DateTime, func
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
 import datetime
 from atexit import register
+from flask_sqlalchemy import SQLAlchemy
 
-POSTGRES_USER = os.getenv('POSTGRES_USER', 'app')
-POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', '1234')
-POSTGRES_DB = os.getenv('POSTGRES_DB', 'flask_dz')
-POSTGRES_HOST = os.getenv('POSTGRES_HOST', '127.0.0.1')
-POSTGRES_PORT = os.getenv('POSTGRES_PORT', '5431')
+#
+#
+# POSTGRES_USER = os.getenv('POSTGRES_USER', 'app')
+# POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', '1234')
+# POSTGRES_DB = os.getenv('POSTGRES_DB', 'flask_dz')
+# POSTGRES_HOST = os.getenv('POSTGRES_HOST', '127.0.0.1')
+# POSTGRES_PORT = os.getenv('POSTGRES_PORT', '5431')
+#
+# PG_DSN = f'postgresql://'\
+#          f'{POSTGRES_USER}:{POSTGRES_PASSWORD}' \
+#          f'@{POSTGRES_HOST}:{POSTGRES_PORT}' \
+#          f'/{POSTGRES_DB}'
+#
+# engine = create_engine(PG_DSN)
+# Session = sessionmaker(bind=engine)
+db = SQLAlchemy()
 
-PG_DSN = f'postgresql://'\
-         f'{POSTGRES_USER}:{POSTGRES_PASSWORD}' \
-         f'@{POSTGRES_HOST}:{POSTGRES_PORT}' \
-         f'/{POSTGRES_DB}'
 
-engine = create_engine(PG_DSN)
-Session = sessionmaker(bind=engine)
 
-class Base(DeclarativeBase):
-    @property
-    def id_dict(self):
-        return {'id':self.id}
+
+# class Base(DeclarativeBase):
+#     @property
+#     def id_dict(self):
+#         return {'id':self.id}
+#Base = DeclarativeBase
+
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, func
+from sqlalchemy.orm import relationship, declarative_base, Session
+from sqlalchemy import create_engine
+
+Base = declarative_base()
+
+
+class Users(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True,autoincrement=True)
+    username = Column(String, nullable=False)
+    advertisements = relationship('Advertisement', back_populates='user')
+
 
 class Advertisement(Base):
     __tablename__ = 'advertisement'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)  # столбец id c типом данных int
-    header: Mapped[str]=  mapped_column(String, unique=True, nullable=False) # заголовок объявления
-    description: Mapped[str] = mapped_column(String, nullable=False)
-    reqistation_time : Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now()) # выаолнить запись даты на стороне постгреса
+    id = Column(Integer, primary_key=True,autoincrement=True)
+    header = Column(String, unique=True, nullable=False)
+    description = Column(String, nullable=False)
+    registration_time = Column(DateTime, server_default=func.now())
+    user_id = Column(Integer, ForeignKey('users.id'))
+    user = relationship('Users', back_populates='advertisements')
 
     @property
     def dict(self):
         return {
-            'id':self.id,
-            'header':self.header,
+            'id': self.id,
+            'header': self.header,
             'description': self.description,
-            'registration_time':self.reqistation_time.isoformat(),
+            'registration_time': self.registration_time.isoformat() if self.registration_time else None,
+            'owner': self.user.username if self.user else None
         }
+
+
+# # Создаем движок и базу данных (приведен пример с SQLite)
+engine = create_engine('sqlite:///:memory:', echo=True)
+#Session = sessionmaker(bind=engine)
 Base.metadata.create_all(bind=engine)
-register(engine.dispose)
+
+# # Работа с сессией
+with Session(engine) as session:
+    user = Users(id=1,username='Автор 1')
+    print('user', user.username, user.id)
+    adv1 = Advertisement(id=1, header='advert1', description='selling house', user=user)
+    adv2 = Advertisement(id=2, header='advert2', description='selling car', user=user)
+    print('adv1', adv1.dict)
+
+    session.add(user)
+    session.add_all([adv1, adv2])
+    session.commit()
+
+    # Получение первого пользователя и его объявлений
+    author = session.query(Users).first()
+    print(author.advertisements)  # список объявлений пользователя
+
+
