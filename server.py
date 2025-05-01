@@ -83,4 +83,4 @@ app.add_url_rule("/api/advertisements/<int:advertisement_id>", view_func=sites_v
 app.add_url_rule("/api/advertisements", view_func=sites_view, methods=['POST'])
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

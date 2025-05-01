@@ -4,39 +4,26 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
 import datetime
 from atexit import register
 from flask_sqlalchemy import SQLAlchemy
-
-#
-#
-# POSTGRES_USER = os.getenv('POSTGRES_USER', 'app')
-# POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', '1234')
-# POSTGRES_DB = os.getenv('POSTGRES_DB', 'flask_dz')
-# POSTGRES_HOST = os.getenv('POSTGRES_HOST', '127.0.0.1')
-# POSTGRES_PORT = os.getenv('POSTGRES_PORT', '5431')
-#
-# PG_DSN = f'postgresql://'\
-#          f'{POSTGRES_USER}:{POSTGRES_PASSWORD}' \
-#          f'@{POSTGRES_HOST}:{POSTGRES_PORT}' \
-#          f'/{POSTGRES_DB}'
-#
-# engine = create_engine(PG_DSN)
-# Session = sessionmaker(bind=engine)
-db = SQLAlchemy()
-
-
-
-
-# class Base(DeclarativeBase):
-#     @property
-#     def id_dict(self):
-#         return {'id':self.id}
-#Base = DeclarativeBase
-
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.orm import relationship, declarative_base, Session
 from sqlalchemy import create_engine
 
-Base = declarative_base()
 
+POSTGRES_USER = os.getenv('POSTGRES_USER', 'app')
+POSTGRES_PASSWORD = os.getenv('POSTGRES_PASSWORD', '1234')
+POSTGRES_DB = os.getenv('POSTGRES_DB', 'flask_dz')
+POSTGRES_HOST = os.getenv('POSTGRES_HOST', '127.0.0.1')
+POSTGRES_PORT = os.getenv('POSTGRES_PORT', '5431')
+
+PG_DSN = f'postgresql://'\
+         f'{POSTGRES_USER}:{POSTGRES_PASSWORD}' \
+         f'@{POSTGRES_HOST}:{POSTGRES_PORT}' \
+         f'/{POSTGRES_DB}'
+
+engine = create_engine(PG_DSN)
+db = SQLAlchemy()
+
+Base = declarative_base()
 
 class Users(Base):
     __tablename__ = 'users'
@@ -64,26 +51,9 @@ class Advertisement(Base):
             'owner': self.user.username if self.user else None
         }
 
+user = Users(id=2, username='Автор 1')
+#print('user', user.username, user.id)
+adv1 = Advertisement(id=2, header='advert1', description='selling house', user=user)
 
-# # Создаем движок и базу данных (приведен пример с SQLite)
-engine = create_engine('sqlite:///:memory:', echo=True)
-#Session = sessionmaker(bind=engine)
-Base.metadata.create_all(bind=engine)
-
-# # Работа с сессией
-with Session(engine) as session:
-    user = Users(id=1,username='Автор 1')
-    print('user', user.username, user.id)
-    adv1 = Advertisement(id=1, header='advert1', description='selling house', user=user)
-    adv2 = Advertisement(id=2, header='advert2', description='selling car', user=user)
-    print('adv1', adv1.dict)
-
-    session.add(user)
-    session.add_all([adv1, adv2])
-    session.commit()
-
-    # Получение первого пользователя и его объявлений
-    author = session.query(Users).first()
-    print(author.advertisements)  # список объявлений пользователя
 
 
