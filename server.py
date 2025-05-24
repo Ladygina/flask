@@ -1,3 +1,5 @@
+import datetime
+
 import requests
 from flask import Flask, jsonify,request
 #from requests import request
@@ -21,7 +23,7 @@ def get_advertisement(advertisement_id):
     adv = request.session.get(Advertisement,advertisement_id)
     if adv is None:
         raise HttpError('404', 'advertisement not found')
-    return adv, 'GET'
+    return adv
 
 @app.before_request
 def before_request():
@@ -30,6 +32,7 @@ def before_request():
 
 @app.after_request
 def after_request(response):
+    request.session.commit()
     request.session.close()
     return response
 def add_advertisement(advertisement):
@@ -54,21 +57,29 @@ class SitesView(MethodView):
         print('data', data, type(data))
         data = validate_json(request.json, CreateAdvertisement)
         print("Validated data:", data)
-        advertisement = Advertisement(header=data['header'], description=data['description'])
+        advertisement = Advertisement(id=data['id'],
+                                      header=data['header'],
+                                      description=data['description'],
+                                      user_id=data['user_id'],
+                                      registration_time= datetime.datetime.now())
         add_advertisement(advertisement)
-        return jsonify(advertisement.id_dict)
+        return jsonify(advertisement.dict)
 
 
-    def patch(self,advertisement_id:int):
-        data = validate_json(request.json, UpdateAdvertisement)
-        print(data)
-
+    def patch(self, advertisement_id: int):
         advertisement = get_advertisement(advertisement_id)
-        if data.get('header'):
-            advertisement.header = data['header']
-        elif data.get('description'):
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Обновляем поля, которые пришли в PATCH
+        if 'description' in data:
             advertisement.description = data['description']
-        add_advertisement(advertisement)
+        if 'header' in data:
+            advertisement.header = data['header']
+        # и так далее для других полей, если нужно
+
+        request.session.commit()
         return jsonify(advertisement.dict)
 
 
